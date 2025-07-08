@@ -7,6 +7,8 @@
 #include "Components/DecalComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "GroundDecal.generated.h"
 
 UCLASS()
@@ -24,6 +26,7 @@ public:
 	float DecalSize = 100;
 	UFUNCTION(BlueprintCallable, Category = "Grid Decal")
 	void SpawnGridDecal(const FVector& Location, const FVector& Normal);
+
 	virtual void Tick(float DeltaTime) override;
 protected:
 	// Called when the game starts or when spawned
@@ -35,4 +38,13 @@ protected:
 private: 
     UPROPERTY(VisibleAnywhere, Category = "Grid Decal")  
     UDecalComponent* GridDecalComponent;  
+
+	UPROPERTY()
+	USceneCaptureComponent2D* SceneCapture;
+
+	UPROPERTY()
+	UTextureRenderTarget2D* RenderTarget;
+
+	void BakeMeshToDecalTexture(const FVector& location,const FVector& Normal);
+
 };

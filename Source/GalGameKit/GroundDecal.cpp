@@ -2,6 +2,10 @@
 
 
 #include "GroundDecal.h"
+#include "Engine/World.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
 AGroundDecal::AGroundDecal()
@@ -11,6 +15,14 @@ AGroundDecal::AGroundDecal()
     // 初始化贴花组件
     GridDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("GridDecalComponent"));
     RootComponent = GridDecalComponent;
+
+	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture"));
+	SceneCapture->SetupAttachment(RootComponent);
+	SceneCapture->bCaptureEveryFrame = false; // 只在需要时捕捉
+	SceneCapture->bCaptureOnMovement = false; // 禁止在移动时捕捉
+	RenderTarget->CreateDefaultSubobject<UTextureRenderTarget2D>(TEXT("RenderTarget"));
+	RenderTarget->InitAutoFormat(1024, 1024); // 设置渲染目标的分辨率
+	SceneCapture->TextureTarget = RenderTarget;
 }
 
 // Called when the game starts or when spawned
@@ -85,3 +97,25 @@ FTransform AGroundDecal::CalculateDecalTransform(const FVector& Location, const 
     return FTransform(DecalRotation, DecalLocation, FVector::OneVector);
 }
 
+void AGroundDecal::BakeMeshToDecalTexture(const FVector& location, const FVector& Normal)
+{
+    UStaticMeshComponent* TempMeshComp = NewObject<UStaticMeshComponent>(this);
+    TempMeshComp->RegisterComponent();
+    TempMeshComp->SetStaticMesh(SourceMesh);
+    TempMeshComp->SetWorldLocation(location);
+    TempMeshComp->SetWorldRotation(Normal.Rotation());
+
+    // 设置SceneCapture的位置和朝向
+    SceneCapture->SetWorldLocation(location + Normal * 100.0f); // 适当偏移
+    SceneCapture->SetWorldRotation(Normal.Rotation());
+
+    // 只渲染TempMeshComp
+    SceneCapture->ShowOnlyComponents.Empty();
+    SceneCapture->ShowOnlyComponents.Add(TempMeshComp);
+
+    // 捕捉一次
+    SceneCapture->CaptureScene();
+
+    // 清理临时组件
+    TempMeshComp->DestroyComponent();
+}
